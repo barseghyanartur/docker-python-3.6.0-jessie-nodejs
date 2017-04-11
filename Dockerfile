@@ -103,4 +103,38 @@ RUN curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
 RUN apt-get install -y nodejs
 RUN curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.33.0/install.sh | bash
 
+# Separatad in steps. Most of the steps are obligatory. Optional steps could be skipped. 
+# Install Java 8
+RUN echo "Java 8 installation"
+RUN apt-get install --yes python-software-properties
+RUN apt-get install --yes software-properties-common
+RUN sudo add-apt-repository "deb http://ppa.launchpad.net/webupd8team/java/ubuntu xenial main"
+RUN sudo apt-get update
+RUN echo debconf shared/accepted-oracle-license-v1-1 select true | /usr/bin/debconf-set-selections
+RUN echo debconf shared/accepted-oracle-license-v1-1 seen true | /usr/bin/debconf-set-selections
+RUN sudo apt-get install --yes oracle-java8-installer
+
+# Install ElasticSearc 2.x
+RUN echo "ElasticSearch 2.x installation"
+RUN wget -qO - https://packages.elastic.co/GPG-KEY-elasticsearch | sudo apt-key add -
+RUN echo "deb http://packages.elastic.co/elasticsearch/2.x/debian stable main" | sudo tee -a /etc/apt/sources.list.d/elasticsearch-2.x.list
+RUN sudo apt-get update && sudo apt-get install elasticsearch
+
+# Configure ElasticSearch
+RUN echo "ElasticSearch 2.x configuration"
+RUN sudo update-rc.d elasticsearch defaults 95 10
+
+# Install additional ElasticSearch plugins (this step can be skipped!)
+RUN /usr/share/elasticsearch/bin/plugin install mobz/elasticsearch-head
+
+# Either of the next two lines is needed to be able to access "localhost:9200" from the host os
+RUN sudo echo "network.bind_host: 0" >> /etc/elasticsearch/elasticsearch.yml
+RUN sudo echo "network.host: 0.0.0.0" >> /etc/elasticsearch/elasticsearch.yml
+
+# Enable CORS
+RUN sudo echo "http.cors.enabled: true" >> /etc/elasticsearch/elasticsearch.yml
+
+# Start the ElasticSearch
+RUN sudo /etc/init.d/elasticsearch start
+
 CMD ["python3"]
